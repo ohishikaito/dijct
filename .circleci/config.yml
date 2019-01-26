@@ -10,10 +10,10 @@ jobs:
       - checkout
       - run:
           name: build
-          command: go build -o dist/dijct ./src
+          command: go build -o dist/dijct
       - run:
           name: test
-          command: go test ./src/dijct/tests/ -test.v
+          command: go test ./tests/ -test.v
 workflows:
   version: 2
   build:
