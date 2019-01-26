@@ -1,8 +1,13 @@
 package dijct
 
+import (
+	"reflect"
+)
+
 type (
 	// RegisterOptions は 登録時のオプションです
 	RegisterOptions struct {
-		lifetimeScope LifetimeScope
+		LifetimeScope LifetimeScope
+		Interfaces    []reflect.Type
 	}
 )

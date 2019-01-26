@@ -46,15 +46,31 @@ func (container *container) Register(target Target, options ...RegisterOptions) 
 		return err
 	}
 	lts := InvokeManaged
-	if options != nil && len(options) == 1 {
-		option := options[0]
-		lts = option.lifetimeScope
-	}
+	kind := out.Kind()
 	isFunc := ins != nil
 	if !isFunc {
 		lts = ContainerManaged
 	}
-	container.factoryInfos[out] = factoryInfo{target: reflect.ValueOf(target), lifetimeScope: lts, ins: ins, isFunc: isFunc}
+	count := 0
+	value := reflect.ValueOf(target)
+	if options != nil && len(options) == 1 {
+		option := options[0]
+		if isFunc {
+			lts = option.LifetimeScope
+		}
+		if option.Interfaces != nil && len(option.Interfaces) > 0 {
+			for _, p := range option.Interfaces {
+				container.factoryInfos[p] = factoryInfo{target: value, lifetimeScope: lts, ins: ins, isFunc: isFunc}
+				count++
+			}
+		}
+	}
+	if kind != reflect.Ptr {
+		container.factoryInfos[out] = factoryInfo{target: value, lifetimeScope: lts, ins: ins, isFunc: isFunc}
+		count++
+	} else if count == 0 {
+		return fmt.Errorf("ポインタを登録する場合は、インターフェイスを指定する必要があります")
+	}
 	return nil
 }
 
@@ -121,8 +137,7 @@ func (container *container) resolveContainerManagedObject(t reflect.Type, factor
 		args[i] = *v
 	}
 
-	fn := reflect.ValueOf(t)
-	outs := fn.Call(args)
+	outs := factoryInfo.target.Call(args)
 	out := outs[0]
 	container.cache[t] = out
 	return &out, nil
@@ -146,8 +161,7 @@ func (container *container) resolveInvokeManagedObject(t reflect.Type, factoryIn
 		args[i] = *v
 	}
 
-	fn := reflect.ValueOf(t)
-	outs := fn.Call(args)
+	outs := factoryInfo.target.Call(args)
 	out := outs[0]
 	c[t] = out
 	return &out, nil
