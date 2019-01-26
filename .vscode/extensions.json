@@ -1,0 +1,7 @@
+{
+  "recommendations": [
+    "ms-vscode.Go",
+    "esbenp.prettier-vscode",
+    "streetsidesoftware.code-spell-checker"
+  ]
+}

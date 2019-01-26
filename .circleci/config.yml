@@ -1,0 +1,26 @@
+version: 2.1
+executors:
+  golang:
+    docker:
+      - image: circleci/golang:latest
+jobs:
+  build:
+    executor: golang
+    steps:
+      - checkout
+      - run:
+          name: build
+          command: go build -o dist/dijct ./src
+      - run:
+          name: test
+          command: go test ./src/dijct/tests/ -test.v
+workflows:
+  version: 2
+  build:
+    jobs:
+      - build:
+          filters:
+            branches:
+              only: /.*/
+            tags:
+              ignore: /.*/

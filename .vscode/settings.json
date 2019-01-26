@@ -1,0 +1,29 @@
+{
+  "files.autoSave": "onFocusChange",
+  "editor.formatOnSave": true,
+  "cSpell.words": [
+    "dijct",
+    "dijcttest",
+    "gomock",
+    "uuid"
+  ],
+  "files.exclude": {
+    "**/.git": true,
+    "**/.svn": true,
+    "**/.hg": true,
+    "**/CVS": true,
+    "**/.DS_Store": true,
+    "**/dist": true
+  },
+  "cSpell.ignoreRegExpList": ["/.*ー/"],
+  "cSpell.ignorePaths": [
+    "**/package-lock.json",
+    "**/node_modules/**",
+    "**/vscode-extension/**",
+    "**/.git/**",
+    ".vscode",
+    "typings",
+    "go.mod",
+    "go.sum"
+  ]
+}
