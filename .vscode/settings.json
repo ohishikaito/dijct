@@ -5,6 +5,7 @@
     "dijct",
     "dijcttest",
     "gomock",
+    "tampopos",
     "uuid"
   ],
   "files.exclude": {
