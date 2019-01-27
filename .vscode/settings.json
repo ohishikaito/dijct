@@ -2,9 +2,12 @@
   "files.autoSave": "onFocusChange",
   "editor.formatOnSave": true,
   "cSpell.words": [
+    "Fprintf",
+    "Printf",
     "dijct",
     "dijcttest",
     "gomock",
+    "struct",
     "tampopos",
     "uuid"
   ],
