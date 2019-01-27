@@ -33,7 +33,13 @@ func TestOnContainerResolve(t *testing.T) {
 	service1ID := ""
 	service2ID := ""
 	service3ID := ""
-	err = container.Invoke(func(useCase UseCase, nestedService NestedService, service1 Service1, service2 Service2, service3 Service3) {
+	err = container.Invoke(func(
+		useCase UseCase,
+		nestedService NestedService,
+		service1 Service1,
+		service2 Service2,
+		service3 Service3,
+	) {
 		if useCase.GetName() != "useCase" {
 			t.FailNow()
 		}
@@ -160,7 +166,23 @@ func TestOnChildContainer(t *testing.T) {
 		t.Fatal(err)
 	}
 }
-
+func TestOnContainerResolved(t *testing.T) {
+	container := dijct.NewContainer()
+	err := container.Invoke(func(
+		currentContainer dijct.Container,
+		ioCContainer dijct.IoCContainer,
+		serviceLocator dijct.ServiceLocator,
+	) {
+		if container != currentContainer ||
+			container != ioCContainer ||
+			container != serviceLocator {
+			t.FailNow()
+		}
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
 func TestOnRegisterError1(t *testing.T) {
 	container := dijct.NewContainer()
 	err := container.Register(func() (string, string) {

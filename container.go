@@ -7,15 +7,26 @@ import (
 
 type (
 	container struct {
-		factoryInfos    map[reflect.Type]factoryInfo
-		cache           map[reflect.Type]reflect.Value
-		parentContainer *container
+		factoryInfos                map[reflect.Type]factoryInfo
+		cache                       map[reflect.Type]reflect.Value
+		parentContainer             *container
+		containerInterfaceType      reflect.Type
+		ioCContainerInterfaceType   reflect.Type
+		serviceLocatorInterfaceType reflect.Type
 	}
 	// Container は DIコンテナーです
 	Container interface {
 		Register(constructor Target, options ...RegisterOptions) error
-		Invoke(invoker Invoker) error
+		IoCContainer
+	}
+	// IoCContainer です
+	IoCContainer interface {
+		ServiceLocator
 		CreateChildContainer() Container
+	}
+	// ServiceLocator です
+	ServiceLocator interface {
+		Invoke(invoker Invoker) error
 	}
 )
 
@@ -25,9 +36,12 @@ func NewContainer(options ...ContainerOptions) Container {
 }
 func newContainer(parentContainer *container) *container {
 	return &container{
-		factoryInfos:    make(map[reflect.Type]factoryInfo),
-		cache:           make(map[reflect.Type]reflect.Value),
-		parentContainer: parentContainer,
+		factoryInfos:                make(map[reflect.Type]factoryInfo),
+		cache:                       make(map[reflect.Type]reflect.Value),
+		parentContainer:             parentContainer,
+		containerInterfaceType:      reflect.TypeOf((*Container)(nil)).Elem(),
+		ioCContainerInterfaceType:   reflect.TypeOf((*IoCContainer)(nil)).Elem(),
+		serviceLocatorInterfaceType: reflect.TypeOf((*ServiceLocator)(nil)).Elem(),
 	}
 }
 
@@ -106,6 +120,10 @@ func (container *container) Invoke(invoker Invoker) error {
 }
 
 func (container *container) resolve(t reflect.Type, cache *map[reflect.Type]reflect.Value) (*reflect.Value, error) {
+	if container.containerInterfaceType == t || container.ioCContainerInterfaceType == t || container.serviceLocatorInterfaceType == t {
+		v := reflect.ValueOf(container)
+		return &v, nil
+	}
 	factoryInfo, ok := container.factoryInfos[t]
 	if !ok {
 		if container.parentContainer != nil {
