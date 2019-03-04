@@ -81,12 +81,20 @@ func (container *container) Register(target Target, options ...RegisterOptions) 
 		if option.Interfaces != nil && len(option.Interfaces) > 0 {
 			for _, p := range option.Interfaces {
 				container.factoryInfos[p] = factoryInfo{target: value, lifetimeScope: lts, ins: ins, isFunc: isFunc}
+				_, ok := container.cache[p]
+				if ok {
+					delete(container.cache, p)
+				}
 				count++
 			}
 		}
 	}
 	if kind != reflect.Ptr {
 		container.factoryInfos[out] = factoryInfo{target: value, lifetimeScope: lts, ins: ins, isFunc: isFunc}
+		_, ok := container.cache[out]
+		if ok {
+			delete(container.cache, out)
+		}
 		count++
 	} else if count == 0 {
 		return fmt.Errorf("ポインタを登録する場合は、インターフェイスを指定する必要があります")
