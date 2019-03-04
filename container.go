@@ -9,7 +9,6 @@ type (
 	container struct {
 		factoryInfos                map[reflect.Type]factoryInfo
 		cache                       map[reflect.Type]reflect.Value
-		parentContainer             *container
 		containerInterfaceType      reflect.Type
 		ioCContainerInterfaceType   reflect.Type
 		serviceLocatorInterfaceType reflect.Type
@@ -32,13 +31,12 @@ type (
 
 // NewContainer はコンテナーを生成します
 func NewContainer(options ...ContainerOptions) Container {
-	return newContainer(nil)
+	return newContainer(make(map[reflect.Type]factoryInfo), make(map[reflect.Type]reflect.Value))
 }
-func newContainer(parentContainer *container) *container {
+func newContainer(factoryInfos map[reflect.Type]factoryInfo, cache map[reflect.Type]reflect.Value) *container {
 	return &container{
-		factoryInfos:                make(map[reflect.Type]factoryInfo),
-		cache:                       make(map[reflect.Type]reflect.Value),
-		parentContainer:             parentContainer,
+		factoryInfos:                factoryInfos,
+		cache:                       cache,
 		containerInterfaceType:      reflect.TypeOf((*Container)(nil)).Elem(),
 		ioCContainerInterfaceType:   reflect.TypeOf((*IoCContainer)(nil)).Elem(),
 		serviceLocatorInterfaceType: reflect.TypeOf((*ServiceLocator)(nil)).Elem(),
@@ -47,7 +45,15 @@ func newContainer(parentContainer *container) *container {
 
 // CreateChildContainer は子コンテナを生成します
 func (container *container) CreateChildContainer() Container {
-	return newContainer(container)
+	factoryInfos := make(map[reflect.Type]factoryInfo)
+	for key, value := range container.factoryInfos {
+		factoryInfos[key] = value
+	}
+	cache := make(map[reflect.Type]reflect.Value)
+	for key, value := range container.cache {
+		cache[key] = value
+	}
+	return newContainer(factoryInfos, cache)
 }
 
 // Register はコンストラクタまたは定数を登録します
@@ -126,9 +132,6 @@ func (container *container) resolve(t reflect.Type, cache *map[reflect.Type]refl
 	}
 	factoryInfo, ok := container.factoryInfos[t]
 	if !ok {
-		if container.parentContainer != nil {
-			return container.parentContainer.resolve(t, cache)
-		}
 		return nil, fmt.Errorf("指定されたタイプを解決できません。(%v)", t)
 	}
 	switch factoryInfo.lifetimeScope {
