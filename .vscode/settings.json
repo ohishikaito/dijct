@@ -1,6 +1,8 @@
 {
   "files.autoSave": "onFocusChange",
   "editor.formatOnSave": true,
+  "editor.tabSize": 2,
+  "prettier.useTabs": false,
   "cSpell.words": [
     "Fprintf",
     "Printf",
@@ -9,7 +11,8 @@
     "gomock",
     "struct",
     "tampopos",
-    "uuid"
+    "uuid",
+    "wakuwaku"
   ],
   "files.exclude": {
     "**/.git": true,

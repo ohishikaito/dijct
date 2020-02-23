@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/tampopos/dijct"
+	"github.com/wakuwaku3/dijct"
 )
 
 func TestOnContainerResolve(t *testing.T) {
