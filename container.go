@@ -26,6 +26,7 @@ type (
 	// ServiceLocator です
 	ServiceLocator interface {
 		Invoke(invoker Invoker) error
+		Verify() error
 	}
 )
 
@@ -58,7 +59,7 @@ func (container *container) CreateChildContainer() Container {
 
 // Register はコンストラクタまたは定数を登録します
 func (container *container) Register(target Target, options ...RegisterOptions) error {
-	if options != nil && len(options) > 1 {
+	if len(options) > 1 {
 		return fmt.Errorf("オプションは単一である必要があります")
 	}
 	out, ins, err := getTargetReflectionInfos(target)
@@ -73,7 +74,7 @@ func (container *container) Register(target Target, options ...RegisterOptions) 
 	}
 	count := 0
 	value := reflect.ValueOf(target)
-	if options != nil && len(options) == 1 {
+	if len(options) == 1 {
 		option := options[0]
 		if isFunc {
 			lts = option.LifetimeScope
@@ -194,4 +195,23 @@ func (container *container) resolveInvokeManagedObject(t reflect.Type, factoryIn
 	out := outs[0]
 	c[t] = out
 	return &out, nil
+}
+
+func (container *container) Verify() error {
+	lenIns := len(container.factoryInfos)
+	if lenIns == 0 {
+		return fmt.Errorf("解決するオブジェクトが存在しません")
+	}
+	args := make([]reflect.Value, lenIns)
+	cache := make(map[reflect.Type]reflect.Value)
+	i := 0
+	for t := range container.factoryInfos {
+		v, err := container.resolve(t, &cache)
+		if err != nil {
+			return err
+		}
+		args[i] = *v
+		i++
+	}
+	return nil
 }
