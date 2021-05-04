@@ -1,6 +1,6 @@
 {
   "recommendations": [
-    "ms-vscode.Go",
+    "golang.go",
     "esbenp.prettier-vscode",
     "streetsidesoftware.code-spell-checker"
   ]

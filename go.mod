@@ -1,5 +1,5 @@
 module github.com/wakuwaku3/dijct
 
-require github.com/google/uuid v1.1.1
+require github.com/google/uuid v1.2.0
 
-go 1.13
+go 1.16
