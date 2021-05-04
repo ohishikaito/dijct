@@ -36,26 +36,26 @@ func Test_container_Invoke(t *testing.T) {
 			service3 Service3,
 		) {
 			if useCase.GetName() != "useCase" {
-				t.FailNow()
+				t.Fatal()
 			}
 			if nestedService.GetName() != "nestedService" &&
 				nestedService.GetID() != useCase.GetNestedService().GetID() {
-				t.FailNow()
+				t.Fatal()
 			}
 			if service1.GetName() != "service1" &&
 				service1.GetID() != useCase.GetService1().GetID() &&
 				service1.GetID() != useCase.GetNestedService().GetService1().GetID() {
-				t.FailNow()
+				t.Fatal()
 			}
 			if service2.GetName() != "service2" &&
 				service2.GetID() != useCase.GetService2().GetID() &&
 				service2.GetID() != useCase.GetNestedService().GetService2().GetID() {
-				t.FailNow()
+				t.Fatal()
 			}
 			if service3.GetName() != "service3" &&
 				service3.GetID() != useCase.GetService3().GetID() &&
 				service3.GetID() != useCase.GetNestedService().GetService3().GetID() {
-				t.FailNow()
+				t.Fatal()
 			}
 		}); err != nil {
 			t.Fatal(err)
@@ -69,14 +69,14 @@ func Test_container_Invoke(t *testing.T) {
 			t.Fatal(err)
 		}
 		service1ID := ""
-		if err := sut.Invoke(func(service1 Service1, service3 Service3) {
+		if err := sut.Invoke(func(service1 Service1) {
 			service1ID = service1.GetID()
 		}); err != nil {
 			t.Fatal(err)
 		}
-		if err := sut.Invoke(func(service1 Service1, service2 Service2, service3 Service3) {
+		if err := sut.Invoke(func(service1 Service1) {
 			if service1ID == service1.GetID() {
-				t.FailNow()
+				t.Fatal()
 			}
 		}); err != nil {
 			t.Fatal(err)
@@ -86,7 +86,7 @@ func Test_container_Invoke(t *testing.T) {
 		t.Parallel()
 		sut := dijct.NewContainer()
 
-		if err := sut.Register(NewService2, dijct.RegisterOptions{LifetimeScope: dijct.InvokeManaged}); err != nil {
+		if err := sut.Register(NewService2, dijct.RegisterOptions{LifetimeScope: dijct.ContainerManaged}); err != nil {
 			t.Fatal(err)
 		}
 		ifs := []reflect.Type{reflect.TypeOf((*Service3)(nil)).Elem()}
@@ -103,10 +103,10 @@ func Test_container_Invoke(t *testing.T) {
 		}
 		if err := sut.Invoke(func(service2 Service2, service3 Service3) {
 			if service2ID != service2.GetID() {
-				t.FailNow()
+				t.Fatal(service2ID, service2.GetID())
 			}
 			if service3ID != service3.GetID() {
-				t.FailNow()
+				t.Fatal(service3ID, service3.GetID())
 			}
 		}); err != nil {
 			t.Fatal(err)
@@ -123,7 +123,7 @@ func Test_container_Invoke(t *testing.T) {
 			if sut != currentContainer ||
 				sut != ioCContainer ||
 				sut != serviceLocator {
-				t.FailNow()
+				t.Fatal()
 			}
 		})
 		if err != nil {
@@ -134,7 +134,7 @@ func Test_container_Invoke(t *testing.T) {
 		t.Parallel()
 		sut := dijct.NewContainer()
 		err := sut.Invoke("")
-		if err == nil || err.Error() != "関数を指定してください" {
+		if err == nil || err != dijct.ErrRequireFunction {
 			t.Fatal(err)
 		}
 	})
@@ -142,7 +142,7 @@ func Test_container_Invoke(t *testing.T) {
 		t.Parallel()
 		sut := dijct.NewContainer()
 		err := sut.Invoke(func() {})
-		if err == nil || err.Error() != "解決するオブジェクトが存在しません" {
+		if err == nil || err != dijct.ErrNotFoundComponent {
 			t.Fatal(err)
 		}
 	})
@@ -150,7 +150,7 @@ func Test_container_Invoke(t *testing.T) {
 		t.Parallel()
 		sut := dijct.NewContainer()
 		err := sut.Invoke(func(service1 Service1) {})
-		if err == nil || err.Error() != "指定されたタイプを解決できません。(dijcttest.Service1)" {
+		if err == nil || !dijct.IsErrInvalidResolveComponent(err) {
 			t.Fatal(err)
 		}
 	})
@@ -271,20 +271,20 @@ func Test_container_CreateChildContainer(t *testing.T) {
 					t.Fatal(ns.GetID(), s1.GetID(), s2.GetID(), s3.GetID(), nestedService.GetID(), service1.GetID(), service2.GetID(), service3.GetID())
 				}
 				if s3.GetID() != service3.GetID() || ns.GetService3().GetID() != service3.GetID() || nestedService.GetService3().GetID() != service3.GetID() {
-					t.FailNow()
+					t.Fatal()
 				}
 			}); err != nil {
 				t.Fatal(err)
 			}
 			if err := sut.Invoke(func(service1 Service1, service2 Service2, service3 Service3) {
 				if s1.GetID() == service1.GetID() {
-					t.FailNow()
+					t.Fatal()
 				}
 				if s2.GetID() != service2.GetID() {
-					t.FailNow()
+					t.Fatal()
 				}
 				if s3.GetID() != service3.GetID() {
-					t.FailNow()
+					t.Fatal()
 				}
 			}); err != nil {
 				t.Fatal(err)
@@ -339,13 +339,13 @@ func Test_container_CreateChildContainer(t *testing.T) {
 		}
 		if err := sut.Invoke(func(service1 Service1, service2 Service2, service3 Service3) {
 			if s1.GetID() == service1.GetID() {
-				t.FailNow()
+				t.Fatal()
 			}
 			if s2.GetID() != service2.GetID() {
-				t.FailNow()
+				t.Fatal()
 			}
 			if s3.GetID() != service3.GetID() {
-				t.FailNow()
+				t.Fatal()
 			}
 		}); err != nil {
 			t.Fatal(err)
@@ -365,7 +365,7 @@ func Test_container_CreateChildContainer(t *testing.T) {
 
 		if err := sut.Invoke(func(service1 Service1) {
 			if service1.GetName() != "service2" {
-				t.FailNow()
+				t.Fatal()
 			}
 		}); err != nil {
 			t.Fatal(err)
@@ -378,8 +378,8 @@ func Test_container_Register(t *testing.T) {
 		err := sut.Register(func() (string, string) {
 			return "", ""
 		})
-		if err == nil || err.Error() != "コンストラクタの戻り値は単一である必要があります" {
-			t.FailNow()
+		if err == nil || err != dijct.ErrNeedSingleResponseConstructor {
+			t.Fatal()
 		}
 	})
 	t.Run("オプションは単一である必要があること", func(t *testing.T) {
@@ -389,14 +389,14 @@ func Test_container_Register(t *testing.T) {
 		err := sut.Register(func() string {
 			return ""
 		}, opt1, opt2)
-		if err == nil || err.Error() != "オプションは単一である必要があります" {
+		if err == nil || err != dijct.ErrNoMultipleOption {
 			t.Fatal(err)
 		}
 	})
 	t.Run("ポインタを登録する場合は、インターフェイスを指定する必要があること", func(t *testing.T) {
 		sut := dijct.NewContainer()
 		err := sut.Register(NewService3())
-		if err == nil || err.Error() != "ポインタを登録する場合は、インターフェイスを指定する必要があります" {
+		if err == nil || err != dijct.ErrNeedInterfaceOnPointerRegistering {
 			t.Fatal(err)
 		}
 	})
@@ -428,7 +428,7 @@ func Test_container_Verify(t *testing.T) {
 	})
 	t.Run("Verify できること2", func(t *testing.T) {
 		sut := dijct.NewContainer()
-		if err := sut.Verify(); err == nil || err.Error() != "解決するオブジェクトが存在しません" {
+		if err := sut.Verify(); err == nil || err != dijct.ErrNotFoundComponent {
 			t.Fatal(err)
 		}
 	})
@@ -448,7 +448,7 @@ func Test_container_Verify(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if err := sut.Verify(); err == nil || err.Error() != "指定されたタイプを解決できません。(dijcttest.Service3)" {
+		if err := sut.Verify(); err == nil || !dijct.IsErrInvalidResolveComponent(err) {
 			t.Fatal(err)
 		}
 	})

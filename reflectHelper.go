@@ -1,7 +1,6 @@
 package dijct
 
 import (
-	"fmt"
 	"reflect"
 )
 
@@ -16,7 +15,7 @@ func getIns(t reflect.Type) []reflect.Type {
 func getOut(t reflect.Type) (reflect.Type, error) {
 	l := t.NumOut()
 	if l != 1 {
-		return nil, fmt.Errorf("コンストラクタの戻り値は単一である必要があります")
+		return nil, ErrNeedSingleResponseConstructor
 	}
 	return t.Out(0), nil
 }

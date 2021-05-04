@@ -1,7 +1,6 @@
 package dijct
 
 import (
-	"fmt"
 	"reflect"
 )
 
@@ -60,7 +59,7 @@ func (container *container) CreateChildContainer() Container {
 // Register はコンストラクタまたは定数を登録します
 func (container *container) Register(target Target, options ...RegisterOptions) error {
 	if len(options) > 1 {
-		return fmt.Errorf("オプションは単一である必要があります")
+		return ErrNoMultipleOption
 	}
 	out, ins, err := getTargetReflectionInfos(target)
 	if err != nil {
@@ -98,7 +97,7 @@ func (container *container) Register(target Target, options ...RegisterOptions) 
 		}
 		count++
 	} else if count == 0 {
-		return fmt.Errorf("ポインタを登録する場合は、インターフェイスを指定する必要があります")
+		return ErrNeedInterfaceOnPointerRegistering
 	}
 	return nil
 }
@@ -107,12 +106,12 @@ func (container *container) Register(target Target, options ...RegisterOptions) 
 func (container *container) Invoke(invoker Invoker) error {
 	t := reflect.TypeOf(invoker)
 	if t.Kind() != reflect.Func {
-		return fmt.Errorf("関数を指定してください")
+		return ErrRequireFunction
 	}
 	ins := getIns(t)
 	lenIns := len(ins)
 	if lenIns == 0 {
-		return fmt.Errorf("解決するオブジェクトが存在しません")
+		return ErrNotFoundComponent
 	}
 	args := make([]reflect.Value, lenIns)
 	cache := make(map[reflect.Type]reflect.Value)
@@ -141,7 +140,7 @@ func (container *container) resolve(t reflect.Type, cache *map[reflect.Type]refl
 	}
 	factoryInfo, ok := container.factoryInfos[t]
 	if !ok {
-		return nil, fmt.Errorf("指定されたタイプを解決できません。(%v)", t)
+		return nil, newErrInvalidResolveComponent(t)
 	}
 	switch factoryInfo.lifetimeScope {
 	case ContainerManaged:
@@ -200,7 +199,7 @@ func (container *container) resolveInvokeManagedObject(t reflect.Type, factoryIn
 func (container *container) Verify() error {
 	lenIns := len(container.factoryInfos)
 	if lenIns == 0 {
-		return fmt.Errorf("解決するオブジェクトが存在しません")
+		return ErrNotFoundComponent
 	}
 	args := make([]reflect.Value, lenIns)
 	cache := make(map[reflect.Type]reflect.Value)
