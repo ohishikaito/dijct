@@ -11,7 +11,7 @@ var (
 	ErrNeedInterfaceOnPointerRegistering = fmt.Errorf("ポインタを登録する場合は、インターフェイスを指定する必要があります")
 	ErrRequireFunction                   = fmt.Errorf("関数を指定してください")
 	ErrNotFoundComponent                 = fmt.Errorf("解決するオブジェクトが存在しません")
-	ErrNeedSingleResponseConstructor     = fmt.Errorf("コンストラクタの戻り値は単一である必要があります")
+	ErrRequireResponse                   = fmt.Errorf("登録する関数には返り値が必要です")
 )
 
 func newErrInvalidResolveComponent(t reflect.Type) error {

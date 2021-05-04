@@ -44,20 +44,20 @@ func newContainer(factoryInfos map[reflect.Type]factoryInfo, cache map[reflect.T
 }
 
 // CreateChildContainer は子コンテナを生成します
-func (container *container) CreateChildContainer() Container {
+func (c *container) CreateChildContainer() Container {
 	factoryInfos := make(map[reflect.Type]factoryInfo)
-	for key, value := range container.factoryInfos {
+	for key, value := range c.factoryInfos {
 		factoryInfos[key] = value
 	}
 	cache := make(map[reflect.Type]reflect.Value)
-	for key, value := range container.cache {
+	for key, value := range c.cache {
 		cache[key] = value
 	}
 	return newContainer(factoryInfos, cache)
 }
 
 // Register はコンストラクタまたは定数を登録します
-func (container *container) Register(target Target, options ...RegisterOptions) error {
+func (c *container) Register(target Target, options ...RegisterOptions) error {
 	if len(options) > 1 {
 		return ErrNoMultipleOption
 	}
@@ -80,20 +80,20 @@ func (container *container) Register(target Target, options ...RegisterOptions) 
 		}
 		if option.Interfaces != nil && len(option.Interfaces) > 0 {
 			for _, p := range option.Interfaces {
-				container.factoryInfos[p] = factoryInfo{target: value, lifetimeScope: lts, ins: ins, isFunc: isFunc}
-				_, ok := container.cache[p]
+				c.factoryInfos[p] = factoryInfo{target: value, lifetimeScope: lts, ins: ins, isFunc: isFunc}
+				_, ok := c.cache[p]
 				if ok {
-					delete(container.cache, p)
+					delete(c.cache, p)
 				}
 				count++
 			}
 		}
 	}
 	if kind != reflect.Ptr {
-		container.factoryInfos[out] = factoryInfo{target: value, lifetimeScope: lts, ins: ins, isFunc: isFunc}
-		_, ok := container.cache[out]
+		c.factoryInfos[out] = factoryInfo{target: value, lifetimeScope: lts, ins: ins, isFunc: isFunc}
+		_, ok := c.cache[out]
 		if ok {
-			delete(container.cache, out)
+			delete(c.cache, out)
 		}
 		count++
 	} else if count == 0 {
@@ -103,7 +103,7 @@ func (container *container) Register(target Target, options ...RegisterOptions) 
 }
 
 // Invoke はコンテナからインスタンスを解決して呼び出します
-func (container *container) Invoke(invoker Invoker) error {
+func (c *container) Invoke(invoker Invoker) error {
 	t := reflect.TypeOf(invoker)
 	if t.Kind() != reflect.Func {
 		return ErrRequireFunction
@@ -116,7 +116,7 @@ func (container *container) Invoke(invoker Invoker) error {
 	args := make([]reflect.Value, lenIns)
 	cache := make(map[reflect.Type]reflect.Value)
 	for i, in := range ins {
-		v, err := container.resolve(in, &cache)
+		v, err := c.resolve(in, &cache)
 		if err != nil {
 			return err
 		}
@@ -125,41 +125,49 @@ func (container *container) Invoke(invoker Invoker) error {
 
 	fn := reflect.ValueOf(invoker)
 	outs := fn.Call(args)
-	for _, out := range outs {
-		if err, ok := out.Interface().(error); ok {
+	if err := c.getError(outs); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *container) getError(outs []reflect.Value) error {
+	l := len(outs)
+	if l > 0 {
+		if err, ok := outs[l-1].Interface().(error); ok {
 			return err
 		}
 	}
 	return nil
 }
 
-func (container *container) resolve(t reflect.Type, cache *map[reflect.Type]reflect.Value) (*reflect.Value, error) {
-	if container.containerInterfaceType == t || container.ioCContainerInterfaceType == t || container.serviceLocatorInterfaceType == t {
-		v := reflect.ValueOf(container)
+func (c *container) resolve(t reflect.Type, cache *map[reflect.Type]reflect.Value) (*reflect.Value, error) {
+	if c.containerInterfaceType == t || c.ioCContainerInterfaceType == t || c.serviceLocatorInterfaceType == t {
+		v := reflect.ValueOf(c)
 		return &v, nil
 	}
-	factoryInfo, ok := container.factoryInfos[t]
+	factoryInfo, ok := c.factoryInfos[t]
 	if !ok {
 		return nil, newErrInvalidResolveComponent(t)
 	}
 	switch factoryInfo.lifetimeScope {
 	case ContainerManaged:
-		return container.resolveContainerManagedObject(t, factoryInfo, cache)
+		return c.resolveContainerManagedObject(t, factoryInfo, cache)
 	}
-	return container.resolveInvokeManagedObject(t, factoryInfo, cache)
+	return c.resolveInvokeManagedObject(t, factoryInfo, cache)
 }
-func (container *container) resolveContainerManagedObject(t reflect.Type, factoryInfo factoryInfo, cache *map[reflect.Type]reflect.Value) (*reflect.Value, error) {
-	if v, ok := container.cache[t]; ok {
+func (c *container) resolveContainerManagedObject(t reflect.Type, factoryInfo factoryInfo, cache *map[reflect.Type]reflect.Value) (*reflect.Value, error) {
+	if v, ok := c.cache[t]; ok {
 		return &v, nil
 	}
 	if !factoryInfo.isFunc {
-		container.cache[t] = factoryInfo.target
+		c.cache[t] = factoryInfo.target
 		return &factoryInfo.target, nil
 	}
 	lenIns := len(factoryInfo.ins)
 	args := make([]reflect.Value, lenIns)
 	for i, in := range factoryInfo.ins {
-		v, err := container.resolve(in, cache)
+		v, err := c.resolve(in, cache)
 		if err != nil {
 			return nil, err
 		}
@@ -167,23 +175,31 @@ func (container *container) resolveContainerManagedObject(t reflect.Type, factor
 	}
 
 	outs := factoryInfo.target.Call(args)
+	for _, out := range outs {
+		if err, ok := out.Interface().(error); ok {
+			return nil, err
+		}
+	}
+	if err := c.getError(outs); err != nil {
+		return nil, err
+	}
 	out := outs[0]
-	container.cache[t] = out
+	c.cache[t] = out
 	return &out, nil
 }
-func (container *container) resolveInvokeManagedObject(t reflect.Type, factoryInfo factoryInfo, cache *map[reflect.Type]reflect.Value) (*reflect.Value, error) {
-	c := *cache
-	if v, ok := c[t]; ok {
+func (c *container) resolveInvokeManagedObject(t reflect.Type, factoryInfo factoryInfo, cache *map[reflect.Type]reflect.Value) (*reflect.Value, error) {
+	cch := *cache
+	if v, ok := cch[t]; ok {
 		return &v, nil
 	}
 	if !factoryInfo.isFunc {
-		c[t] = factoryInfo.target
+		cch[t] = factoryInfo.target
 		return &factoryInfo.target, nil
 	}
 	lenIns := len(factoryInfo.ins)
 	args := make([]reflect.Value, lenIns)
 	for i, in := range factoryInfo.ins {
-		v, err := container.resolve(in, cache)
+		v, err := c.resolve(in, cache)
 		if err != nil {
 			return nil, err
 		}
@@ -191,21 +207,24 @@ func (container *container) resolveInvokeManagedObject(t reflect.Type, factoryIn
 	}
 
 	outs := factoryInfo.target.Call(args)
+	if err := c.getError(outs); err != nil {
+		return nil, err
+	}
 	out := outs[0]
-	c[t] = out
+	cch[t] = out
 	return &out, nil
 }
 
-func (container *container) Verify() error {
-	lenIns := len(container.factoryInfos)
+func (c *container) Verify() error {
+	lenIns := len(c.factoryInfos)
 	if lenIns == 0 {
 		return ErrNotFoundComponent
 	}
 	args := make([]reflect.Value, lenIns)
 	cache := make(map[reflect.Type]reflect.Value)
 	i := 0
-	for t := range container.factoryInfos {
-		v, err := container.resolve(t, &cache)
+	for t := range c.factoryInfos {
+		v, err := c.resolve(t, &cache)
 		if err != nil {
 			return err
 		}

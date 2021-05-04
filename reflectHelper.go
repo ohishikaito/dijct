@@ -14,8 +14,8 @@ func getIns(t reflect.Type) []reflect.Type {
 }
 func getOut(t reflect.Type) (reflect.Type, error) {
 	l := t.NumOut()
-	if l != 1 {
-		return nil, ErrNeedSingleResponseConstructor
+	if l < 1 {
+		return nil, ErrRequireResponse
 	}
 	return t.Out(0), nil
 }

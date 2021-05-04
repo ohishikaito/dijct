@@ -1,6 +1,10 @@
 package dijcttest
 
-import "github.com/google/uuid"
+import (
+	"errors"
+
+	"github.com/google/uuid"
+)
 
 type (
 	useCase struct {
@@ -185,4 +189,11 @@ func (service3 *service3) GetID() string {
 // GetName is
 func (service3 *service3) GetName() string {
 	return service3.name
+}
+
+func NewService1With2() (Service1, Service2) {
+	return &service1{id: uuid.New().String(), name: "service1"}, &service2{id: uuid.New().String(), name: "service2"}
+}
+func NewService1With2WithError() (Service1, Service2, error) {
+	return &service1{id: uuid.New().String(), name: "service1"}, &service2{id: uuid.New().String(), name: "service2"}, errors.New("NewService1With2WithError Error")
 }

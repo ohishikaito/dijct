@@ -1,6 +1,7 @@
 package dijcttest
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 
@@ -8,6 +9,17 @@ import (
 )
 
 func Test_container_Invoke(t *testing.T) {
+	t.Run("最後尾の引数がエラーで nil でない場合", func(t *testing.T) {
+		sut := dijct.NewContainer()
+		if err := sut.Register(NewService1With2WithError); err != nil {
+			t.Fatal()
+		}
+		if err := sut.Invoke(func(service1 Service1) {}); err == nil || err.Error() != "NewService1With2WithError Error" {
+			t.Fatal()
+		}
+	})
+	t.Skip()
+
 	t.Run("1回の Invoke で生成されるオブジェクトは登録された型ごとに一意であること", func(t *testing.T) {
 		t.Parallel()
 		sut := dijct.NewContainer()
@@ -153,6 +165,52 @@ func Test_container_Invoke(t *testing.T) {
 		if err == nil || !dijct.IsErrInvalidResolveComponent(err) {
 			t.Fatal(err)
 		}
+	})
+	t.Run("Invoke した関数の引数", func(t *testing.T) {
+		t.Run("error が返ってきた場合", func(t *testing.T) {
+			sut := dijct.NewContainer()
+			if err := sut.Register(NewService1); err != nil {
+				t.Fatal()
+			}
+			e := errors.New("invoked function returning error")
+			if err := sut.Invoke(func(service1 Service1) error {
+				return e
+			}); err != e {
+				t.Fatal()
+			}
+		})
+	})
+	t.Run("コンストラクタの戻り値が複数の場合", func(t *testing.T) {
+		t.Run("先頭の引数が解決される", func(t *testing.T) {
+			sut := dijct.NewContainer()
+			if err := sut.Register(NewService1With2); err != nil {
+				t.Fatal()
+			}
+			if err := sut.Invoke(func(service1 Service1) {}); err != nil {
+				t.Fatal()
+			}
+			if err := sut.Invoke(func(service2 Service2) {}); !dijct.IsErrInvalidResolveComponent(err) {
+				t.Fatal()
+			}
+		})
+		t.Run("最後尾の引数がエラーで nil でない場合 ()", func(t *testing.T) {
+			sut := dijct.NewContainer()
+			if err := sut.Register(NewService1With2WithError); err != nil {
+				t.Fatal()
+			}
+			if err := sut.Invoke(func(service1 Service1) {}); err.Error() != "NewService1With2WithError Error" {
+				t.Fatal()
+			}
+		})
+		t.Run("最後尾の引数がエラーで nil でない場合(ContainerManaged)", func(t *testing.T) {
+			sut := dijct.NewContainer()
+			if err := sut.Register(NewService1With2WithError, dijct.RegisterOptions{LifetimeScope: dijct.ContainerManaged}); err != nil {
+				t.Fatal()
+			}
+			if err := sut.Invoke(func(service1 Service1) {}); err.Error() != "NewService1With2WithError Error" {
+				t.Fatal()
+			}
+		})
 	})
 }
 func Test_container_CreateChildContainer(t *testing.T) {
@@ -373,13 +431,12 @@ func Test_container_CreateChildContainer(t *testing.T) {
 	})
 }
 func Test_container_Register(t *testing.T) {
-	t.Run("コンストラクタの戻り値は単一である必要があること", func(t *testing.T) {
+	t.Run("返り値がない関数を登録しようとした場合", func(t *testing.T) {
 		sut := dijct.NewContainer()
-		err := sut.Register(func() (string, string) {
-			return "", ""
+		err := sut.Register(func() {
 		})
-		if err == nil || err != dijct.ErrNeedSingleResponseConstructor {
-			t.Fatal()
+		if err == nil || err != dijct.ErrRequireResponse {
+			t.Fatal(err)
 		}
 	})
 	t.Run("オプションは単一である必要があること", func(t *testing.T) {
